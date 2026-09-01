@@ -15,7 +15,7 @@ services:
 
   # Frontend Static Site
   - type: web
-    name: taskflow-frontend
+    name: taskflow-todo
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
