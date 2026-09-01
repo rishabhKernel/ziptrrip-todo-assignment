@@ -1,176 +1,124 @@
-# TaskFlow — Features & Functionality Guide
+# TaskFlow — Features & Behavioral Specifications
 
-This document outlines all implemented user-facing features and behavioral specifications for the TaskFlow application.
-
----
-
-## 1. Task Dashboard (`/todos`)
-
-The primary landing dashboard displaying high-level productivity metrics, controls for searching/sorting/filtering, and the task list.
-
-- **URL:** `http://localhost:5173/todos`
-- Redirects from root `/` automatically.
-- Fetches all active tasks on initial load with spinner feedback.
+This document details all implemented user-facing features, business logic, and behavioral rules in the TaskFlow application.
 
 ---
 
-## 2. Todo Creation
+## 1. Multi-Page Navigation & Routing
 
-Users can create new tasks via the modal dialog accessed from the header or hero button.
+TaskFlow implements a multi-page structure via React Router DOM with explicit page lifecycles:
 
-- **Fields:**
-  - **Title:** Required, text input, max 150 characters.
-  - **Description:** Optional, multi-line textarea, max 1000 characters.
-  - **Priority:** Selection dropdown (`Low`, `Medium`, `High` - default: `Medium`).
-  - **Due Date:** Optional HTML5 date picker.
-- **Rules & Behavior:**
-  - Past dates cannot be selected for new tasks (visually disabled in calendar via `min` attribute).
-  - Backend independently rejects past dates with HTTP 400.
-  - Character counters provide visual feedback approaching or reaching limits.
-  - Auto-focuses on the title field upon opening.
-  - Shows loading spinner on submit button while processing.
-  - Closes on successful creation and appends task to the top of the list with a success toast.
+- **Task Dashboard (`/todos`):** Main view containing task statistics, search, filtering, sorting, and the card list.
+- **Root Redirect (`/`):** Automatically navigates root visitors to `/todos`.
+- **Dedicated Detail View (`/todo?id=<uuid>`):** Dedicated single-task view reading the task identifier from URL query parameters.
+- **Direct Refresh Support:** Static site rewrite rules (`/* -> /index.html`) ensure reloading `/todos` or `/todo?id=UUID` renders seamlessly without 404 errors.
 
 ---
 
-## 3. Todo Editing
+## 2. Task Dashboard (`/todos`)
 
-Existing tasks can be modified either directly from the list card action buttons or from the detail page.
-
-- **Behavior:**
-  - Pre-populates all existing task attributes in the modal form.
-  - Allows modification of title, description, priority, and due date.
-  - Overdue tasks retain their existing past dates without validation errors during edits.
-  - Updates local state and UI immediately upon API confirmation.
-
----
-
-## 4. Todo Deletion & Confirmation
-
-Destructive deletion requires explicit confirmation to prevent accidental loss.
-
-- **Flow:**
-  - User triggers delete via trash icon on task card or "Delete Task" button on detail page.
-  - Displays a modal warning dialog describing the permanent action.
-  - Focus is automatically placed on the "Cancel" button as a safe default.
-  - Supports `Escape` key to dismiss and backdrop click.
-  - Shows "Deleting..." spinner during API execution.
-  - If deleted from detail page, user is redirected back to `/todos`.
-
----
-
-## 5. Completion Toggle
-
-Tasks can be toggled between pending and completed states at any time.
-
-- **Card Checkbox:** Directly clickable from the task card without opening details.
-- **Detail Page Button:** Explicit toggle button showing status and updating dynamically.
-- **Visual Feedback:** Completed tasks receive strike-through text, subdued card opacity, and a green status badge.
-- **Due Date Impact:** Completed tasks are never marked as "Overdue", even if their due date is in the past.
-
----
-
-## 6. Productivity Statistics Dashboard
-
-Summary metrics automatically calculate from the active task collection:
-
-- **Total Tasks:** Count of all stored tasks.
-- **Completed:** Count of tasks with `completed: true`.
-- **Pending:** Count of active unfinished tasks.
-- **High Priority:** Count of pending tasks marked with `High` priority.
+### 2.1 Productivity Metrics
+- **Total Tasks:** Cumulative count of all stored tasks.
+- **Completed:** Total finished tasks (`completed: true`).
+- **Pending:** Total active unfinished tasks (`completed: false`).
+- **High Priority:** Unfinished tasks with `High` priority flag.
 - **Progress Bar:** Real-time completion percentage calculation (`(completed / total) * 100`).
 
+### 2.2 Task Creation
+- **Trigger:** "New Task" buttons in header and hero section, or "Create your first task" button on empty state.
+- **Form Controls:**
+  - **Title (Required):** 1 to 150 characters with live character counter.
+  - **Description (Optional):** Multi-line textarea up to 1000 characters with live counter.
+  - **Priority:** Dropdown selector (`Low`, `Medium`, `High` - default: `Medium`).
+  - **Due Date:** Date picker with past-date prevention.
+- **Validation Rules:**
+  - Past dates are disabled in the calendar picker (`min` attribute set to local today).
+  - Backend independently rejects past dates on creation with HTTP 400.
+  - Auto-focuses title field upon opening modal.
+
+### 2.3 Task Card Display
+- Displays title, 2-line truncated description, priority badge, and formatted due date.
+- **Checkbox:** Clickable to toggle task completion immediately without opening details.
+- **Completed Style:** Strike-through title, green status badge, and subdued opacity.
+- **Overdue Accent:** Red left-border indicator on incomplete overdue tasks.
+- **Hover Actions:** Edit and Delete buttons revealed on card hover (always visible on mobile).
+- **Navigation:** Clicking card title or body navigates to `/todo?id=<uuid>`.
+
 ---
 
-## 7. Search Functionality
+## 3. Search, Filter & Sort
 
-Interactive search bar with debounced/instant client-side filtering.
+### 3.1 Search
+- Real-time search across both **Title** and **Description** fields (case-insensitive).
+- Includes clear button (`×`) to reset search input instantly.
 
-- Matches against both **Title** and **Description** fields (case-insensitive).
-- Includes clear button (`×`) when text is entered.
-- Shows empty state ("No matching tasks") with search term highlight when zero items match.
-
----
-
-## 8. Filtering System
-
-Tab-based filter pills allowing users to segment task views:
-
-- **All:** Full task list.
-- **Pending:** Tasks awaiting completion.
-- **Completed:** Finished tasks.
+### 3.2 Filtering
+Tab-based filter pills to segment views:
+- **All:** Displays all tasks.
+- **Pending:** Only incomplete tasks.
+- **Completed:** Only finished tasks.
 - **🔥 High:** High-priority items only.
 - **Medium:** Medium-priority items only.
 - **Low:** Low-priority items only.
 
----
-
-## 9. Sorting System
-
-Dropdown sort control offering 5 sorting strategies:
-
+### 3.3 Sorting
+Dropdown selector supporting 5 sorting strategies:
 - **Newest first:** By `createdAt` descending (default).
 - **Oldest first:** By `createdAt` ascending.
-- **Priority:** High → Medium → Low ordering.
-- **Due date:** Closest upcoming due date first (tasks without due date sorted to end).
-- **Title A–Z:** Alphabetical sort by title string.
+- **Priority:** High → Medium → Low order.
+- **Due date:** Closest upcoming deadline first (tasks without due dates sorted to end).
+- **Title A–Z:** Alphabetical ascending by title.
 
 ---
 
-## 10. Due Date Management & Overdue Detection
+## 4. Due Date & Overdue Logic
 
-Smart date formatting and contextual badges based on current local calendar date:
+Relative deadline calculations based on the user's current calendar date:
 
-- **Overdue:** Due date is prior to today and task is incomplete. Highlights with red left border on card and badge `⚠ Overdue · [Date]`.
-- **Due Today:** Due date equals current date (`📅 Due today`).
-- **Due Tomorrow:** Due date is tomorrow (`📅 Due tomorrow`).
-- **Upcoming:** Due date within 7 days (`📅 Due in X days`).
-- **Future:** Due date further out (`📅 Due [Date]`).
-- **Completed:** Displays green check badge regardless of date.
+| Status | Condition | Badge Label |
+|---|---|---|
+| **Overdue** | Incomplete & due date < today | `⚠ Overdue · [Date]` (Red badge) |
+| **Due Today** | Incomplete & due date = today | `📅 Due today` (Amber badge) |
+| **Due Tomorrow** | Incomplete & due date = tomorrow | `📅 Due tomorrow` (Blue badge) |
+| **Upcoming** | Incomplete & due within 7 days | `📅 Due in N days` (Blue badge) |
+| **Future** | Incomplete & due > 7 days | `📅 Due [Date]` (Blue badge) |
+| **Completed** | `completed: true` | `✓ Due [Date]` (Green badge, never marked overdue) |
 
 ---
 
-## 11. Dedicated Detail Page (`/todo?id=<uuid>`)
+## 5. Task Detail Page (`/todo?id=<uuid>`)
 
-Multi-page route dedicated to in-depth task inspection and metadata review.
-
-- **Routing:** Uses query parameter format `/todo?id=<uuid>`.
-- **Main View:** Displays full title, formatted long-form description (preserving line breaks), status badge, priority badge, and due date badge.
+- **Query Parameter Lookup:** Reads `id` via `useSearchParams()`.
+- **Main Display:** Full title, complete multi-line description, and status/priority/due-date badges.
 - **Metadata Sidebar:**
-  - Status (Completed / Pending)
-  - Priority
-  - Formatted Due Date
-  - Created timestamp (date and time)
+  - Status (`Completed` / `Pending`)
+  - Priority (`🔥 High`, `⚡ Medium`, `🌿 Low`)
+  - Due Date with relative status formatting
+  - Creation timestamp (date and time)
   - Last updated timestamp
-  - Full unique UUID
-- **Header & Navigation:** Includes dedicated "Back to Tasks" button.
+  - Full unique UUID string
+- **Page Actions:**
+  - **Mark as Complete / Pending:** Live status toggle.
+  - **Edit Task:** Opens edit modal pre-filled with current task data.
+  - **Delete Task:** Triggers delete confirmation modal.
+  - **Back to Tasks:** Returns user to `/todos`.
 
 ---
 
-## 12. State Handling & Edge Cases
+## 6. Feedback, Modals & Edge Cases
 
-- **Loading State:** Dedicated spinner and status text for asynchronous data fetching.
-- **Empty State (No Tasks):** Welcoming graphic and call-to-action button when the store contains zero items.
-- **Empty State (Filter Mismatch):** Contextual message explaining no tasks match criteria with a "Clear filters" button.
-- **Invalid ID State:** Catches missing `?id=` query parameter before calling API and presents a navigation button.
-- **Not Found State (404):** Handles deleted or non-existent IDs with an error screen.
-- **Network Error State:** Displays human-friendly connection error with "Try Again" retry button.
+### 6.1 Delete Confirmation Modal
+- Intercepts delete actions on both the list and detail pages.
+- Focuses "Cancel" button by default for safety.
+- Supports `Escape` key dismissal and backdrop click.
 
----
+### 6.2 Toast Notifications
+- Temporary popups in the bottom-right notifying users of task creation, updates, completion toggles, and deletions.
+- Auto-dismisses after 2.0 to 3.5 seconds with optional manual close (`×`).
 
-## 13. Toast Notifications
-
-Ephemeral status banners notify users of asynchronous action outcomes.
-
-- Types: **Success** (green icon) and **Error** (red icon).
-- Auto-dismisses after 3.5 seconds (2.0s for toggle).
-- Manual close button (`×`).
-- Positioned fixed at bottom-right (bottom-center on mobile).
-
----
-
-## 14. Responsive Layout
-
-- **Desktop (≥1024px):** 5-column stat cards, 2-column detail page with sticky metadata sidebar.
-- **Tablet (768px - 1023px):** 3-column stats, stacked detail layout.
-- **Mobile (<768px):** 2-column stats, full-width search and controls, horizontal scrolling filter tabs, persistent action buttons.
+### 6.3 Empty & Error States
+- **Empty List State:** Graphic and "Create your first task" button when database has 0 items.
+- **Filter Empty State:** "No matching tasks" with a "Clear filters" action button.
+- **Invalid ID State:** Clear warning when visiting `/todo` without an `?id=` parameter.
+- **Not Found State (404):** Error screen when task UUID does not exist.
+- **Network Error State:** Displays human-friendly connection message with a "Try Again" retry button.
