@@ -7,8 +7,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
+const clientOrigin = process.env.CLIENT_ORIGIN;
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:4173'],
+  origin: clientOrigin || true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 }));
